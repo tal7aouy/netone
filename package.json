@@ -1,0 +1,22 @@
+{
+  "name": "netone",
+  "version": "0.1.0",
+  "description": "Interactive networking & security reference for engineers learning networking from the ground up.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "keywords": ["networking", "osi", "security", "learning", "vite"],
+  "license": "MIT",
+  "author": "tal7aouy (https://github.com/tal7aouy)",
+  "homepage": "https://github.com/tal7aouy/netone",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tal7aouy/netone.git"
+  },
+  "devDependencies": {
+    "vite": "^5.4.0"
+  }
+}
