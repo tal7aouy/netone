@@ -20,7 +20,7 @@
 export const hierarchyTiers = [
   {
     title: 'Root servers (.)',
-    tagline: 'The top of the DNS tree — the starting point of every lookup.',
+    tagline: 'The top of the DNS tree — used when the resolver needs an uncached delegation.',
     layer: 'L7 Application',
     points: [
       '13 logical root server clusters, labelled A through M (a.root-servers.net → m.root-servers.net).',
@@ -160,7 +160,7 @@ export const recordTypes = [
   {
     type: 'AAAA',
     name: 'Address (IPv6)',
-    purpose: 'Maps a hostname to an IPv6 address. Called "quad-A" because A is 4 bits × 4.',
+    purpose: 'Maps a hostname to an IPv6 address. Called "quad-A"; IPv6 addresses have four times the bits of IPv4 (128 versus 32).',
     example: 'example.com.   IN  AAAA   2606:2800:220:1::',
     hint: 'AAAA = four A\'s = four times the bits = IPv6.',
     ttlNote: '300–3600s. Same strategy as A — often set identically so dual-stack clients fail over together.',
@@ -171,7 +171,7 @@ export const recordTypes = [
     name: 'Canonical Name',
     purpose: 'Alias — points one name to another name. The target is the "canonical" host.',
     example: 'blog.example.com.  IN  CNAME  example.github.io.',
-    hint: 'CNAME = "see name". It is a redirect for DNS.',
+    hint: 'CNAME = "see name". It is a DNS alias, not an HTTP redirect.',
     ttlNote: '600–3600s. Avoid at the zone apex (root of the domain) — it is not allowed there.',
     digExample: 'dig blog.example.com CNAME',
   },
@@ -181,7 +181,7 @@ export const recordTypes = [
     purpose: 'Tells senders which server handles email for the domain, with a priority value.',
     example: 'example.com.  IN  MX  10 mail.example.com.',
     hint: 'MX = Mail eXchange. Lower priority number = preferred server.',
-    ttlNote: '3600–86400s. Mail is tolerant of stale data, so long TTLs reduce lookups without risk.',
+    ttlNote: '3600–86400s. Long TTLs reduce queries but can delay mail-routing changes; choose them with migration plans in mind.',
     digExample: 'dig example.com MX',
   },
   {
@@ -208,13 +208,13 @@ export const recordTypes = [
     purpose: 'Metadata about the zone: primary nameserver, admin email, serial, refresh, retry, TTL.',
     example: 'example.com.  IN  SOA  ns1.example.com. admin.example.com. 2024010101 7200 3600 1209600 3600',
     hint: 'SOA = the zone\'s ID card.',
-    ttlNote: 'The last number in the record is the negative-cache TTL — how long resolvers remember "NXDOMAIN" (no such domain).',
+    ttlNote: 'Negative caching uses the smaller of the SOA record TTL and its final MINIMUM field. It can cache NXDOMAIN or missing record types.',
     digExample: 'dig example.com SOA',
   },
   {
     type: 'PTR',
     name: 'Pointer (reverse DNS)',
-    purpose: 'Maps an IP address back to a hostname — the opposite of an A record. Lives in in-addr.arpa.',
+    purpose: 'Maps an IP address back to a hostname — the opposite of an A record. Uses in-addr.arpa for IPv4 and ip6.arpa for IPv6.',
     example: '34.216.184.93.in-addr.arpa.  IN  PTR  example.com.',
     hint: 'PTR = PoinTeR. Reverse lookup: IP → name.',
     ttlNote: '3600–86400s. Reverse mappings rarely change, so long TTLs are fine.',
@@ -264,26 +264,26 @@ export const dnsSecurity = [
   {
     name: 'DNSSEC',
     what: 'Adds cryptographic signatures (DNSKEY, RRSIG) to DNS records so resolvers can verify that an answer genuinely came from the zone owner and was not tampered with in transit.',
-    why: 'Prevents cache poisoning and spoofing — attackers can no longer forge authoritative answers.',
-    enable: 'Add DNSKEY and RRSIG records at your registrar, and publish the DS record in the parent zone to chain trust from the root.',
+    why: 'A validating resolver rejects bogus signed answers when a valid chain of trust is established. DNSSEC does not encrypt queries or protect an unsigned zone as if it were signed.',
+    enable: 'Enable signing at your authoritative DNS provider and publish the matching DS through your registrar in the parent zone. Validate the chain before and after changes; a mismatched DS can break resolution.',
   },
   {
     name: 'DNS over HTTPS (DoH)',
     what: 'DNS queries are sent inside ordinary HTTPS requests to a DoH-capable resolver (e.g. 1.1.1.1 or 8.8.8.8), encrypting them so they look like normal web traffic.',
-    why: 'Prevents ISP/government snooping of DNS queries and blocks DNS-based censorship on the local network.',
+    why: 'Encrypts the client-to-resolver connection against local eavesdropping and modification. The chosen resolver still sees queries; DoH does not guarantee censorship bypass or hide all browsing metadata.',
     enable: 'Configure your browser (Firefox/Chrome) or OS to use a DoH resolver like 1.1.1.1 or dns.google.',
   },
   {
     name: 'DNS over TLS (DoT)',
     what: 'DNS queries travel over a TLS-encrypted TCP connection on port 853 instead of plaintext UDP port 53. Same encryption goal as DoH, different transport.',
-    why: 'Same as DoH but at the OS level — every app on the device benefits without per-app config.',
+    why: 'Encrypts DNS transport to the chosen resolver. Coverage depends on configuration; applications using their own DNS path can bypass a system resolver.',
     enable: 'Configure systemd-resolved, NetworkManager, or dnsmasq to use a DoT upstream on port 853.',
   },
   {
     name: 'DNS Cache Poisoning',
     what: 'An attacker races the real authoritative server by flooding a resolver with forged responses, hoping one matches the query\'s random transaction ID and source port and gets cached as the "answer".',
     why: 'Redirects users to malicious sites while the URL still looks legitimate — a classic phishing vector.',
-    enable: 'Use DNSSEC, source port randomization (0x20 encoding), and a modern resolver that ignores "additional" section data it did not ask for.',
+    enable: 'Use DNSSEC validation, unpredictable transaction IDs, source-port randomization, and strict referral/bailiwick checks. Query-name case randomization (0x20) is a separate technique, not source-port randomization.',
   },
 ];
 
@@ -304,7 +304,7 @@ export const tips = [
   {
     icon: '🔍',
     title: 'Bypass your local cache',
-    text: 'Add <code>+trace</code> or query a public resolver directly: <code>dig @1.1.1.1 example.com</code>. If the answer differs from your default resolver, you have a caching or propagation problem.',
+    text: 'Add <code>+trace</code> or query a public resolver directly: <code>dig @1.1.1.1 example.com</code>. A different answer can reflect caching, split-horizon DNS, geographic routing, or resolver policy; compare TTLs and authoritative answers before diagnosing.',
   },
   {
     icon: '⏱️',
@@ -324,7 +324,7 @@ export const tips = [
   {
     icon: '🔒',
     title: 'Confirm DNSSEC is signing your zone',
-    text: 'Run <code>dig +dnssec example.com A</code> and look for the <code>RRSIG</code> record in the answer. No RRSIG = the zone is not signed.',
+    text: 'Run <code>dig +dnssec example.com A</code> and look for the <code>RRSIG</code> record in the answer. RRSIG shows signatures were returned, not that they were validated. An AD flag from a trusted validating resolver or a validation tool gives stronger evidence; missing signatures require further investigation.',
   },
   {
     icon: '📧',
@@ -339,7 +339,7 @@ export const tips = [
   {
     icon: '📏',
     title: 'Watch the 512-byte UDP limit',
-    text: 'Classic DNS over UDP caps answers at 512 bytes. DNSSEC responses often exceed this and trigger TCP fallback — make sure port 53 TCP is open, not just UDP.',
+    text: 'Classic DNS over UDP caps answers at 512 bytes. EDNS allows larger UDP messages. If a response is truncated (TC flag), clients can retry over TCP; allow TCP as well as UDP port 53.',
   },
   {
     icon: '🧪',

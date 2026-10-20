@@ -2,9 +2,9 @@
  * DNS Deep Dive module — composes the six DNS tabs.
  * @module modules/dns
  */
+import { LookupLab } from './LookupLab.js';
 import { Tabs } from '../../components/Tabs.js';
 import { HierarchyTab } from './HierarchyTab.js';
-import { ResolutionTab } from './ResolutionTab.js';
 import { RecordsTab } from './RecordsTab.js';
 import { CheatTab } from './CheatTab.js';
 import { SecurityTab } from './SecurityTab.js';
@@ -24,13 +24,13 @@ export default {
     const header = document.createElement('div');
     header.className = 'module-header';
 
-    const title = document.createElement('h2');
+    const title = document.createElement('h1');
     title.className = 'module-title';
     title.textContent = 'DNS Deep Dive';
 
     const sub = document.createElement('p');
     sub.className = 'module-sub';
-    sub.textContent = 'How a name becomes a number. The internet\'s phone book, from root servers to record types.';
+    sub.textContent = 'Explore how names resolve, follow the packets, and experiment with records, caching, and DNS security.';
 
     header.appendChild(title);
     header.appendChild(sub);
@@ -38,8 +38,8 @@ export default {
 
     const tabs = Tabs({
       tabs: [
+        { label: 'Interactive Lab', render: LookupLab },
         { label: 'DNS Hierarchy', render: HierarchyTab },
-        { label: 'Resolution Flow', render: ResolutionTab },
         { label: 'Record Types', render: RecordsTab },
         { label: 'Cheat Sheet', render: CheatTab },
         { label: 'Security', render: SecurityTab },

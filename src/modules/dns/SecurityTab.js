@@ -55,7 +55,7 @@ export function SecurityTab(panel) {
   strong.textContent = 'The golden rule';
   callout.appendChild(strong);
   const text = document.createElement('span');
-  text.textContent = ' DNSSEC protects integrity (the answer is genuine), while DoH/DoT protect confidentiality (nobody can read your query). You want both — they solve different problems.';
+  text.textContent = ' DNSSEC validates signed DNS data through a chain of trust. DoH/DoT encrypt transport to your resolver; that resolver can still see your queries. They address different threats.';
   callout.appendChild(text);
   panel.appendChild(callout);
 }
