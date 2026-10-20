@@ -1,11 +1,8 @@
 import './style.css';
+import webSecurity from './modules/web-security/index.js';
 
-import osi from './modules/osi/index.js';
-import ip from './modules/ip/index.js';
 import dns from './modules/dns/index.js';
-import tcpUdp from './modules/tcp-udp/index.js';
-import tls from './modules/tls/index.js';
-import firewallsNat from './modules/firewalls-nat/index.js';
+import llmMcp from './modules/llm-mcp/index.js';
 
 /**
  * Module registry.
@@ -13,7 +10,7 @@ import firewallsNat from './modules/firewalls-nat/index.js';
  * exporting { id, label, icon, render(container) }, then import it here and
  * add it to this array. Nothing else changes.
  */
-const modules = [osi, ip, dns, tcpUdp, tls, firewallsNat];
+const modules = [webSecurity, dns, llmMcp];
 
 const app = document.getElementById('app');
 
@@ -52,15 +49,37 @@ function renderShell() {
   const brandText = document.createElement('span');
   brandText.textContent = 'NetOne';
   brand.appendChild(brandText);
+  const themeToggle = document.createElement('button');
+  themeToggle.type = 'button';
+  themeToggle.className = 'theme-toggle';
+  const updateThemeToggle = () => {
+    const dark = document.documentElement.dataset.theme !== 'light';
+    themeToggle.textContent = dark ? '☀' : '☾';
+    themeToggle.setAttribute('aria-label', dark ? 'Switch to light theme' : 'Switch to dark theme');
+    themeToggle.title = themeToggle.getAttribute('aria-label');
+    themeToggle.setAttribute('aria-pressed', String(dark));
+  };
+  updateThemeToggle();
+  themeToggle.addEventListener('click', () => {
+    const theme = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
+    document.documentElement.dataset.theme = theme;
+    try { localStorage.setItem('netone-theme', theme); } catch { /* Keep the choice for this visit. */ }
+    updateThemeToggle();
+  });
+  brand.appendChild(themeToggle);
   nav.appendChild(brand);
 
   const navList = document.createElement('div');
   navList.className = 'nav-list';
   nav.appendChild(navList);
+  const navCaption = document.createElement('div');
+  navCaption.className = 'nav-caption';
+  navCaption.textContent = 'YOUR LEARNING PATHS';
+  nav.insertBefore(navCaption, navList);
 
   const navFoot = document.createElement('div');
   navFoot.className = 'nav-foot';
-  navFoot.textContent = 'Networking, decoded.';
+  navFoot.innerHTML = '<div class="nav-foot-icon">↗</div><b>A little curiosity. A lot of clarity.</b><p>Your field guide to networking,<br>web security, and AI systems.</p><span>NETONE · LEARN SOMETHING NEW</span>';
   nav.appendChild(navFoot);
 
   // ---- main ----
@@ -78,6 +97,7 @@ const { navList, main } = renderShell();
 
 // ---- module nav buttons ----
 let activeId = modules[0]?.id ?? null;
+let disposeModule = null;
 const rendered = new Set();
 
 modules.forEach((m) => {
@@ -117,8 +137,11 @@ function renderModule() {
   }
   // clear and (re)render — modules are cheap to re-render, and this keeps
   // state simple. For heavier modules you could cache by id like the tabs do.
+  disposeModule?.();
+  disposeModule = null;
   main.innerHTML = '';
-  mod.render(main);
+  const dispose = mod.render(main);
+  if (typeof dispose === 'function') disposeModule = dispose;
   rendered.add(activeId);
 }
 
